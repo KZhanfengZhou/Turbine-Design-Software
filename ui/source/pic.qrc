@@ -1,0 +1,33 @@
+<RCC>
+  <qresource prefix="source">
+    <file>xh.png</file>
+    <file>leaf.png</file>
+    <file>optimize.png</file>
+    <file>xyz.png</file>
+    <file>cascade_thickness.png</file>
+    <file>information.png</file>
+    <file>favicon.ico</file>
+    <file>lashen_off.png</file>
+    <file>lashen_on.png</file>
+    <file>save.png</file>
+    <file>daochu.png</file>
+    <file>close.svg</file>
+    <file>github _github.svg</file>
+    <file>gitlab_gitlab.svg</file>
+    <file>control_off.png</file>
+    <file>control_on.png</file>
+    <file>drag_off.png</file>
+    <file>drag_on.png</file>
+    <file>hudu.png</file>
+    <file>jiemian.png</file>
+    <file>number.png</file>
+    <file>pic.qrc</file>
+    <file>remake.png</file>
+    <file>resize.png</file>
+    <file>undo.png</file>
+    <file>xiaoguo.png</file>
+    <file>zhonghu_off.png</file>
+    <file>zhonghu_on.png</file>
+    <file>zong.png</file>
+  </qresource>
+</RCC>
