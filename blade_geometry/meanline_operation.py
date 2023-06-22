@@ -38,7 +38,7 @@ def normalize(v):
 
 # Get the normal vector of each point on the curve.
 def get_normal(curve):
-    normals = [np.array([0.0, 0.0])]
+    normals = [None]
     n = len(curve)
     for i in range(1, n - 1):
         next = normalize(curve[i + 1] - curve[i])
@@ -126,13 +126,13 @@ def refactor(curve):
     for i in range(int(n / 2), n - 1):
         left = curve[i - 1] - curve[i]
         right = curve[i + 1] - curve[i]
-        if left.dot(right) > 0.01 * sc:
+        if left.dot(right) > 0.0001 * sc:
             curve[i + 1] = 2 * curve[i] - curve[i - 1]
     return curve
 
 
 # Calculate meanline between two curves.
-def meanline_calc(init_c1, init_c2, steps=100):
+def meanline_calc(init_c1, init_c2, steps=60):
     ax.plot(init_c1[:, 0], init_c1[:, 1], 'b')
     ax.plot(init_c2[:, 0], init_c2[:, 1], 'b')
     c1 = init_c1 # c1: current upper curve
@@ -162,9 +162,10 @@ def meanline_calc(init_c1, init_c2, steps=100):
             n2 = get_dir_normal(c2, init_n2)
         c1 = c1 + dynamic_step(i, init_c1) * n1
         c2 = c2 + dynamic_step(i, init_c1) * n2
+        ax.plot(c1[:, 0], c1[:, 1], 'y')
         c1 = refactor(c1)
         c2 = refactor(c2)
-        if i % 10 == 0:
+        if i % 1 == 0:
             ax.plot(c1[:, 0], c1[:, 1], 'r')
             ax.plot(c2[:, 0], c2[:, 1], 'g')
     plt.show()
