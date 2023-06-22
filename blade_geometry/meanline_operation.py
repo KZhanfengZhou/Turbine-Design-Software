@@ -1,4 +1,5 @@
 import numpy as np
+import shapely
 from numpy.linalg import norm
 from matplotlib import pyplot as plt
 from shapely import LineString, intersection
@@ -71,26 +72,84 @@ def ref_scale(curve):
     return sum
 
 
-# Check if the vector is pointing "towards" the curve or "away from" the curve:
+# ref_p exists:
+# Check if the vector is pointing "towards" the curve or "away from" the curve: v1 is the point and v2 is the normal
 # towards: return 1
 # away: return -1
-def check_direction(p, v, ref_p):
-    if np.dot(v, ref_p - p) > 0:
-        return 1
-    return -1
+#ref_p is None:
+# Check if two vectors are pointing in the same direction. Same: return 1, different: return -1
+def check_direction(v1, v2, ref_p=None):
+    if ref_p is None:
+        if v1.dot(v2) > 0:
+            return 1
+        else:
+            return -1
+    else:
+        if np.dot(v2, ref_p - v1) > 0:
+            return 1
+        return -1
 
 
 # Get normal vectors on a curve with direction always pointing towards the reference curve.
-def get_dir_normal(curve, ref_curve):
-    normals = get_normal(curve)
-    n = len(curve)
+def get_dir_normal(vec, ref, first=False):
+    normals = get_normal(vec)
+    n = len(vec)
     for i in range(1, n - 1):
-        normals[i] *= check_direction(curve[i], normals[i], ref_curve[i])
+        if first:
+            # This means that the normal needs to be checked wrt difference between current curve and reference curve
+            normals[i] *= check_direction(vec[i], normals[i], ref[i])
+        else:
+            # This means that the normal needs to be checked wrt initial normal
+            normals[i] *= check_direction(normals[i], ref[i])
     normals[0] = normals[1]
     normals[n - 1] = normals[n - 2]
     return normals
 
 
+def dynamic_step(i, curve):
+    return (1 - np.exp(-0.05 * i)) * 0.5 * ref_scale(curve)
+
+
+# Calculate meanline between two curves.
+def meanline_calc(init_c1, init_c2, steps=100):
+    ax.plot(init_c1[:, 0], init_c1[:, 1], 'b')
+    ax.plot(init_c2[:, 0], init_c2[:, 1], 'b')
+    c1 = init_c1 # c1: current upper curve
+    c2 = init_c2 # c2: current lower curve
+    init_n1 = [] # normal of initial curve
+    init_n2 = []
+    for i in range(steps):
+        # Check intersection first
+        string1 = LineString(c1)
+        string2 = LineString(c2)
+        inter = intersection(string1, string2)
+        # Plot intersection points
+        if inter.geom_type == "Point":
+            ax.plot(inter.x, inter.y, 'y.')
+        elif inter.geom_type == "MultiPoint":
+            xs = [point.x for point in inter.geoms]
+            ys = [point.y for point in inter.geoms]
+            ax.plot(xs, ys, 'g.')
+        # Now, update the curves
+        if i == 0:
+            n1 = get_dir_normal(init_c1, init_c2, True)
+            init_n1 = n1
+            n2 = get_dir_normal(init_c2, init_c1, True)
+            init_n2 = n2
+        else:
+            n1 = get_dir_normal(c1, init_n1)
+            n2 = get_dir_normal(c2, init_n2)
+        c1 = c1 + dynamic_step(i, init_c1) * n1
+        c2 = c2 + dynamic_step(i, init_c1) * n2
+        '''if i % 5 == 1:
+            ax.plot(c1[:, 0], c1[:, 1], 'r')
+            ax.plot(c2[:, 0], c2[:, 1], 'g')'''
+    plt.show()
+    return
+
+
+
+
 re_p = txt2curve("../re_p.txt")
 re_s = txt2curve("../re_s.txt")
-print_step()
+meanline_calc(re_p, re_s)
