@@ -1,5 +1,4 @@
 import numpy as np
-import shapely
 from numpy.linalg import norm
 from matplotlib import pyplot as plt
 from shapely import LineString, intersection
@@ -44,7 +43,13 @@ def get_normal(curve):
     for i in range(1, n - 1):
         next = normalize(curve[i + 1] - curve[i])
         last = normalize(curve[i] - curve[i - 1])
-        vec = normalize(next - last)
+        if norm(next - last) < 0.001 * sc:
+            vec = np.zeros(2)
+            vec[0] = next[1]
+            vec[1] = -next[0]
+        else:
+            vec = next - last
+        vec = normalize(vec)
         normals.append(vec)
     normals[0] = normals[1]
     normals.append(normals[n - 2])
@@ -107,7 +112,23 @@ def get_dir_normal(vec, ref, first=False):
 
 
 def dynamic_step(i, curve):
-    return (1 - np.exp(-0.05 * i)) * 0.5 * ref_scale(curve)
+    return (1 - np.exp(-0.05 * i)) * 0.5 * sc
+
+
+# Refactor the curve so that it does not turn into weird shapes
+def refactor(curve):
+    n = len(curve)
+    for i in range(int(n / 2), 0, -1):
+        left = curve[i - 1] - curve[i]
+        right = curve[i + 1] - curve[i]
+        if left.dot(right) > 0.0001 * sc:
+            curve[i - 1] = 2 * curve[i] - curve[i + 1]
+    for i in range(int(n / 2), n - 1):
+        left = curve[i - 1] - curve[i]
+        right = curve[i + 1] - curve[i]
+        if left.dot(right) > 0.01 * sc:
+            curve[i + 1] = 2 * curve[i] - curve[i - 1]
+    return curve
 
 
 # Calculate meanline between two curves.
@@ -141,9 +162,11 @@ def meanline_calc(init_c1, init_c2, steps=100):
             n2 = get_dir_normal(c2, init_n2)
         c1 = c1 + dynamic_step(i, init_c1) * n1
         c2 = c2 + dynamic_step(i, init_c1) * n2
-        '''if i % 5 == 1:
+        c1 = refactor(c1)
+        c2 = refactor(c2)
+        if i % 10 == 0:
             ax.plot(c1[:, 0], c1[:, 1], 'r')
-            ax.plot(c2[:, 0], c2[:, 1], 'g')'''
+            ax.plot(c2[:, 0], c2[:, 1], 'g')
     plt.show()
     return
 
@@ -152,4 +175,5 @@ def meanline_calc(init_c1, init_c2, steps=100):
 
 re_p = txt2curve("../re_p.txt")
 re_s = txt2curve("../re_s.txt")
+sc = ref_scale(re_p)
 meanline_calc(re_p, re_s)
