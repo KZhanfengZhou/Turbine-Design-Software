@@ -37,14 +37,13 @@ def normalize(v):
 
 
 # Get the normal vector of each point on the curve.
-def get_normal(curve, ref_curve):
+def get_normal(curve):
     normals = [np.array([0.0, 0.0])]
     n = len(curve)
     for i in range(1, n - 1):
         next = normalize(curve[i + 1] - curve[i])
         last = normalize(curve[i] - curve[i - 1])
         vec = normalize(next - last)
-        vec *= check_direction(curve[i], vec, ref_curve[i])
         normals.append(vec)
     normals[0] = normals[1]
     normals.append(normals[n - 2])
@@ -53,9 +52,12 @@ def get_normal(curve, ref_curve):
 
 # Print one of the turbine curves and its steps of offset. For test only.
 def print_step():
-    ax.plot(re_p[:, 0], re_p[:, 1])
-    one_step = re_p + get_normal(re_p, re_s) * 3 * ref_scale(re_p)
-    ax.plot(one_step[:, 0], one_step[:, 1])
+    ax.plot(re_p[:, 0], re_p[:, 1], 'b')
+    ax.plot(re_s[:, 0], re_s[:, 1], 'r')
+    one_step = re_p + get_dir_normal(re_p, re_s) * 3 * ref_scale(re_p)
+    ax.plot(one_step[:, 0], one_step[:, 1], 'g')
+    one_step = re_s + get_dir_normal(re_s, re_p) * 3 * ref_scale(re_s)
+    ax.plot(one_step[:, 0], one_step[:, 1], 'y')
     plt.show()
     return
 
@@ -78,7 +80,17 @@ def check_direction(p, v, ref_p):
     return -1
 
 
+# Get normal vectors on a curve with direction always pointing towards the reference curve.
+def get_dir_normal(curve, ref_curve):
+    normals = get_normal(curve)
+    n = len(curve)
+    for i in range(1, n - 1):
+        normals[i] *= check_direction(curve[i], normals[i], ref_curve[i])
+    normals[0] = normals[1]
+    normals[n - 1] = normals[n - 2]
+    return normals
+
+
 re_p = txt2curve("../re_p.txt")
 re_s = txt2curve("../re_s.txt")
-n_p = get_normal(re_p, re_s)
 print_step()
