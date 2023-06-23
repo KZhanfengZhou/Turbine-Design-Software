@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import norm
 from matplotlib import pyplot as plt
 from shapely import LineString, intersection
+from operator import itemgetter
 
 # global plot to be used
 fig, ax = plt.subplots()
@@ -112,7 +113,7 @@ def get_dir_normal(vec, ref, first=False):
 
 
 def dynamic_step(i, curve):
-    return (1 - np.exp(-0.05 * i)) * 0.5 * sc
+    return (1 - np.exp(-0.1 * i)) * 0.125 * sc
 
 
 # Refactor the curve so that it does not turn into weird shapes
@@ -124,23 +125,53 @@ def refactor(curve):
         if left.dot(right) > 0.0001 * sc:
             for j in range(i + 1, 0, -1):
                 curve[j - 1] = 2 * curve[j] - curve[j + 1]
+            break
     for i in range(int(n / 2) + 1, n - 1):
         left = curve[i - 1] - curve[i]
         right = curve[i + 1] - curve[i]
         if left.dot(right) > 0.0001 * sc:
             for j in range(i - 1, n - 1):
-                curve[i + 1] = 2 * curve[i] - curve[i - 1]
+                curve[j + 1] = 2 * curve[j] - curve[j - 1]
+            break
     return curve
 
 
+def sort_fn(item):
+    return item[1]
+
+
+def meanline_sort(curve, end_point):
+    start_point = [0.0, 0.0]
+    ref_point = (np.array(start_point) + np.array(end_point))/2
+    points_w_angle = []
+    points = []
+    for point in curve:
+        u = point - ref_point
+        v = start_point - ref_point
+        angle = np.arccos(u.dot(v)/(norm(u) * norm(v)))
+        points_w_angle.append([point, angle])
+    points_w_angle_sorted = sorted(points_w_angle, key=sort_fn)
+    for point in points_w_angle_sorted:
+        points.append(point[0])
+    points = np.array(points)
+    for i in range(1, len(points)):
+        if points[i][0] == points[i - 1][0] and points[i][1] == points[i - 1][1]:
+            np.delete(points, i)
+            i -= 1
+    return points
+
+
 # Calculate meanline between two curves.
-def meanline_calc(init_c1, init_c2, steps=100):
+def meanline_calc(init_c1, init_c2, steps=300):
+    n = len(init_c1)
     ax.plot(init_c1[:, 0], init_c1[:, 1], 'b')
     ax.plot(init_c2[:, 0], init_c2[:, 1], 'b')
-    c1 = init_c1 # c1: current upper curve
-    c2 = init_c2 # c2: current lower curve
-    init_n1 = [] # normal of initial curve
+    c1 = init_c1  # c1: current upper curve
+    c2 = init_c2  # c2: current lower curve
+    init_n1 = []  # normal of initial curve
     init_n2 = []
+    points = []
+    end_point = []
     for i in range(steps):
         # Check intersection first
         string1 = LineString(c1)
@@ -148,11 +179,19 @@ def meanline_calc(init_c1, init_c2, steps=100):
         inter = intersection(string1, string2)
         # Plot intersection points
         if inter.geom_type == "Point":
+            points.append([inter.x, inter.y])
             ax.plot(inter.x, inter.y, 'b.')
+            if not end_point:
+                end_point = [inter.x, inter.y]
         elif inter.geom_type == "MultiPoint":
-            xs = [point.x for point in inter.geoms]
+            '''xs = [point.x for point in inter.geoms]
             ys = [point.y for point in inter.geoms]
-            ax.plot(xs, ys, 'b.')
+            ax.plot(xs, ys, 'b.')'''
+            pts = [[point.x, point.y] for point in inter.geoms]
+            for pt in pts:
+                points.append(pt)
+                if not end_point:
+                    end_point = pt
         # Now, update the curves
         if i == 0:
             n1 = get_dir_normal(init_c1, init_c2, True)
@@ -166,13 +205,15 @@ def meanline_calc(init_c1, init_c2, steps=100):
         c2 = c2 + dynamic_step(i, init_c1) * n2
         c1 = refactor(c1)
         c2 = refactor(c2)
-        if i % 5 == 0:
+        '''if i % 5 == 0:
             ax.plot(c1[:, 0], c1[:, 1], 'r')
-            ax.plot(c2[:, 0], c2[:, 1], 'g')
+            ax.plot(c2[:, 0], c2[:, 1], 'g')'''
+    points = np.array(points)
+    # ax.plot(points[:, 0], points[:, 1], 'b.')
+    points = meanline_sort(points, end_point)
+    ax.plot(points[:, 0], points[:, 1],'b')
     plt.show()
-    return
-
-
+    return points
 
 
 re_p = txt2curve("../re_p.txt")
