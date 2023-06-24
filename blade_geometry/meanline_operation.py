@@ -2,7 +2,6 @@ import numpy as np
 from numpy.linalg import norm
 from matplotlib import pyplot as plt
 from shapely import LineString, intersection
-from operator import itemgetter
 
 # global plot to be used
 fig, ax = plt.subplots()
@@ -141,7 +140,7 @@ def sort_fn(item):
 
 
 def meanline_sort(curve, end_point):
-    start_point = [0.0, 0.0]
+    start_point = np.array([0.0, 0.0])
     ref_point = (np.array(start_point) + np.array(end_point))/2
     points_w_angle = []
     points = []
@@ -154,10 +153,6 @@ def meanline_sort(curve, end_point):
     for point in points_w_angle_sorted:
         points.append(point[0])
     points = np.array(points)
-    for i in range(1, len(points)):
-        if points[i][0] == points[i - 1][0] and points[i][1] == points[i - 1][1]:
-            np.delete(points, i)
-            i -= 1
     return points
 
 
@@ -181,7 +176,7 @@ def meanline_calc(init_c1, init_c2, steps=300):
         if inter.geom_type == "Point":
             points.append([inter.x, inter.y])
             ax.plot(inter.x, inter.y, 'b.')
-            if not end_point:
+            if not end_point or norm(end_point) < sc:
                 end_point = [inter.x, inter.y]
         elif inter.geom_type == "MultiPoint":
             '''xs = [point.x for point in inter.geoms]
@@ -190,7 +185,7 @@ def meanline_calc(init_c1, init_c2, steps=300):
             pts = [[point.x, point.y] for point in inter.geoms]
             for pt in pts:
                 points.append(pt)
-                if not end_point:
+                if not end_point or norm(end_point) < sc:
                     end_point = pt
         # Now, update the curves
         if i == 0:
@@ -211,7 +206,7 @@ def meanline_calc(init_c1, init_c2, steps=300):
     points = np.array(points)
     # ax.plot(points[:, 0], points[:, 1], 'b.')
     points = meanline_sort(points, end_point)
-    ax.plot(points[:, 0], points[:, 1],'b')
+    ax.plot(points[:, 0], points[:, 1], 'b')
     plt.show()
     return points
 
