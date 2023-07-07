@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import norm
 from matplotlib import pyplot as plt
 from shapely import LineString, intersection
+from time import time
 
 # global plot to be used
 fig, ax = plt.subplots()
@@ -81,7 +82,7 @@ def ref_scale(curve):
 # Check if the vector is pointing "towards" the curve or "away from" the curve: v1 is the point and v2 is the normal
 # towards: return 1
 # away: return -1
-#ref_p is None:
+# ref_p is None:
 # Check if two vectors are pointing in the same direction. Same: return 1, different: return -1
 def check_direction(v1, v2, ref_p=None):
     if ref_p is None:
@@ -112,7 +113,7 @@ def get_dir_normal(vec, ref, first=False):
 
 
 def dynamic_step(i, curve):
-    return (1 - np.exp(-0.1 * i)) * 0.125 * sc
+    return (0.1 + (1 - np.exp(-0.1 * i)) * 0.1) * sc
 
 
 # Refactor the curve so that it does not turn into weird shapes
@@ -157,7 +158,8 @@ def meanline_sort(curve, end_point):
 
 
 # Calculate meanline between two curves.
-def meanline_calc(init_c1, init_c2, steps=300):
+def meanline_calc(init_c1, init_c2):
+    start_time = time()
     n = len(init_c1)
     ax.plot(init_c1[:, 0], init_c1[:, 1], 'b')
     ax.plot(init_c2[:, 0], init_c2[:, 1], 'b')
@@ -167,7 +169,9 @@ def meanline_calc(init_c1, init_c2, steps=300):
     init_n2 = []
     points = []
     end_point = []
-    for i in range(steps):
+    exit_count = 0
+    iteration_count = 0
+    while True:
         # Check intersection first
         string1 = LineString(c1)
         string2 = LineString(c2)
@@ -175,20 +179,24 @@ def meanline_calc(init_c1, init_c2, steps=300):
         # Plot intersection points
         if inter.geom_type == "Point":
             points.append([inter.x, inter.y])
-            ax.plot(inter.x, inter.y, 'b.')
+            # ax.plot(inter.x, inter.y, 'b.')
             if not end_point or norm(end_point) < sc:
                 end_point = [inter.x, inter.y]
         elif inter.geom_type == "MultiPoint":
-            '''xs = [point.x for point in inter.geoms]
+            xs = [point.x for point in inter.geoms]
             ys = [point.y for point in inter.geoms]
-            ax.plot(xs, ys, 'b.')'''
+            ax.plot(xs, ys, 'b.')
             pts = [[point.x, point.y] for point in inter.geoms]
             for pt in pts:
                 points.append(pt)
                 if not end_point or norm(end_point) < sc:
                     end_point = pt
+        else:
+            exit_count += 1
+            if exit_count > 5:
+                break
         # Now, update the curves
-        if i == 0:
+        if iteration_count == 0:
             n1 = get_dir_normal(init_c1, init_c2, True)
             init_n1 = n1
             n2 = get_dir_normal(init_c2, init_c1, True)
@@ -196,10 +204,11 @@ def meanline_calc(init_c1, init_c2, steps=300):
         else:
             n1 = get_dir_normal(c1, init_n1)
             n2 = get_dir_normal(c2, init_n2)
-        c1 = c1 + dynamic_step(i, init_c1) * n1
-        c2 = c2 + dynamic_step(i, init_c1) * n2
+        c1 = c1 + dynamic_step(iteration_count, init_c1) * n1
+        c2 = c2 + dynamic_step(iteration_count, init_c1) * n2
         c1 = refactor(c1)
         c2 = refactor(c2)
+        iteration_count += 1
         '''if i % 5 == 0:
             ax.plot(c1[:, 0], c1[:, 1], 'r')
             ax.plot(c2[:, 0], c2[:, 1], 'g')'''
@@ -207,6 +216,8 @@ def meanline_calc(init_c1, init_c2, steps=300):
     # ax.plot(points[:, 0], points[:, 1], 'b.')
     points = meanline_sort(points, end_point)
     ax.plot(points[:, 0], points[:, 1], 'b')
+    end_time = time()
+    # print(end_time - start_time)
     plt.show()
     return points
 
